@@ -46,6 +46,31 @@ export function adaptiveRmsThreshold(
   return Math.max(floor, quantile(sorted, q) * factor);
 }
 
+// Voiced nasal/liquid onsets (m, n, l) pass clarity + RMS gates but their F0
+// hasn't locked onto the tone yet, so they smear the start of the contour.
+// Skip leading frames until three consecutive frames stay inside a ~1-semitone
+// window; cap the trim so we never eat into a genuine T2 rise.
+const ONSET_WINDOW = 3;
+const ONSET_SEMITONES = 1;
+const ONSET_RATIO = Math.pow(2, ONSET_SEMITONES / 12);
+const MAX_ONSET_TRIM_MS = 80;
+
+function findOnsetStableIndex(frames: { t: number; hz: number }[]): number {
+  if (frames.length < ONSET_WINDOW) return 0;
+  const cap = frames[0].t + MAX_ONSET_TRIM_MS / 1000;
+  for (let i = 0; i + ONSET_WINDOW <= frames.length; i++) {
+    if (frames[i].t > cap) return i;
+    let lo = Infinity;
+    let hi = 0;
+    for (let k = i; k < i + ONSET_WINDOW; k++) {
+      if (frames[k].hz < lo) lo = frames[k].hz;
+      if (frames[k].hz > hi) hi = frames[k].hz;
+    }
+    if (lo > 0 && hi / lo <= ONSET_RATIO) return i;
+  }
+  return 0;
+}
+
 export function trackChao(
   rec: Recording,
   cal: Calibration,
@@ -71,10 +96,14 @@ export function trackChao(
     return { ...voiced[i], hz: sortedHz[1] };
   });
 
-  const t0 = smoothed[0].t;
-  const tEnd = smoothed[smoothed.length - 1].t;
+  const onsetIdx = findOnsetStableIndex(smoothed);
+  const trimmed = smoothed.slice(onsetIdx);
+  if (trimmed.length === 0) return { frames: [], durationMs: 0 };
+
+  const t0 = trimmed[0].t;
+  const tEnd = trimmed[trimmed.length - 1].t;
   return {
-    frames: smoothed.map((f) => ({
+    frames: trimmed.map((f) => ({
       t: f.t - t0,
       chao: hzToChao(f.hz, cal),
       clarity: f.clarity,
