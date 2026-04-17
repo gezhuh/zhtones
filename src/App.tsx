@@ -5,6 +5,7 @@ import { Calibrate } from './routes/Calibrate';
 import { SingleTone } from './routes/SingleTone';
 import { PairDrill } from './routes/PairDrill';
 import { Settings } from './routes/Settings';
+import { Dev } from './routes/Dev';
 import { loadCalibration } from './calibration/store';
 import type { Calibration } from './calibration/mapping';
 
@@ -33,6 +34,7 @@ export default function App() {
           <NavLink to="/pairs">Pairs</NavLink>
           <NavLink to="/calibrate">Calibrate</NavLink>
           <NavLink to="/settings">Settings</NavLink>
+          <NavLink to="/dev">Dev</NavLink>
         </nav>
       </header>
       {!cal && (
@@ -47,6 +49,7 @@ export default function App() {
         <Route path="/pairs" element={<PairDrill cal={cal} />} />
         <Route path="/calibrate" element={<Calibrate onSaved={refreshCal} />} />
         <Route path="/settings" element={<Settings cal={cal} onChange={refreshCal} />} />
+        <Route path="/dev" element={<Dev cal={cal} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

@@ -110,6 +110,7 @@ export function SingleTone({ cal }: { cal: Calibration | null }) {
           <PitchStaff
             targetSurface={prompt.surfaceContours}
             user={track?.frames}
+            autoFit
           />
         </div>
         {score != null && (
