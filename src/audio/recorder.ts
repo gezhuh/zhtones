@@ -27,12 +27,25 @@ export async function recordPitch(durationMs: number): Promise<Recording> {
   });
 
   const ctx = new AudioContext();
+  if (ctx.state !== 'running') {
+    try {
+      await ctx.resume();
+    } catch {
+      /* user gesture is already present; ignore */
+    }
+  }
   const workletUrl = `${import.meta.env.BASE_URL}pitch-worklet.js`;
   await ctx.audioWorklet.addModule(workletUrl);
 
   const source = ctx.createMediaStreamSource(stream);
   const node = new AudioWorkletNode(ctx, 'forward-processor');
+  // Keep the graph pulled by connecting through a muted gain node to the
+  // destination. Without this, some browsers never invoke process() because
+  // the audio graph has no path to the speakers.
+  const silent = ctx.createGain();
+  silent.gain.value = 0;
   source.connect(node);
+  node.connect(silent).connect(ctx.destination);
 
   const sampleRate = ctx.sampleRate;
   const detector = PitchDetector.forFloat32Array(FRAME_SIZE);
@@ -69,6 +82,7 @@ export async function recordPitch(durationMs: number): Promise<Recording> {
 
   source.disconnect();
   node.disconnect();
+  silent.disconnect();
   stream.getTracks().forEach((t) => t.stop());
   await ctx.close();
 

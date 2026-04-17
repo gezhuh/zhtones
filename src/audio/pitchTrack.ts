@@ -25,8 +25,8 @@ export function trackChao(
   cal: Calibration,
   opts: TrackOptions = {},
 ): ChaoTrack {
-  const clarityT = opts.clarityThreshold ?? 0.85;
-  const rmsT = opts.rmsThreshold ?? 0.01;
+  const clarityT = opts.clarityThreshold ?? 0.75;
+  const rmsT = opts.rmsThreshold ?? 0.003;
   const minHz = opts.minHz ?? 60;
   const maxHz = opts.maxHz ?? 600;
 
@@ -54,17 +54,29 @@ export function trackChao(
   };
 }
 
-export function medianHzInRange(rec: Recording, opts: TrackOptions = {}): number | null {
-  const clarityT = opts.clarityThreshold ?? 0.9;
-  const rmsT = opts.rmsThreshold ?? 0.015;
+export interface MedianResult {
+  medianHz: number | null;
+  totalFrames: number;
+  voicedFrames: number;
+  peakRms: number;
+}
+
+export function medianHzInRange(rec: Recording, opts: TrackOptions = {}): MedianResult {
+  const clarityT = opts.clarityThreshold ?? 0.8;
+  const rmsT = opts.rmsThreshold ?? 0.004;
   const minHz = opts.minHz ?? 60;
   const maxHz = opts.maxHz ?? 600;
-  const xs = rec.frames
-    .filter((f) => f.clarity >= clarityT && f.rms >= rmsT && f.hz >= minHz && f.hz <= maxHz)
-    .map((f) => f.hz)
-    .sort((a, b) => a - b);
-  if (xs.length === 0) return null;
-  return xs[Math.floor(xs.length / 2)];
+  const voiced = rec.frames.filter(
+    (f) => f.clarity >= clarityT && f.rms >= rmsT && f.hz >= minHz && f.hz <= maxHz,
+  );
+  const xs = voiced.map((f) => f.hz).sort((a, b) => a - b);
+  const peakRms = rec.frames.reduce((m, f) => (f.rms > m ? f.rms : m), 0);
+  return {
+    medianHz: xs.length ? xs[Math.floor(xs.length / 2)] : null,
+    totalFrames: rec.frames.length,
+    voicedFrames: voiced.length,
+    peakRms,
+  };
 }
 
 export function meanAbsoluteChaoError(track: ChaoTrack, target: number[]): number | null {
