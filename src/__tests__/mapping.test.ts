@@ -22,14 +22,14 @@ describe('hz<->chao mapping', () => {
     }
   });
 
-  it('clamps below fMin and above fMax to the [0.5, 5.5] window', () => {
-    expect(hzToChao(10, cal)).toBe(0.5);
-    expect(hzToChao(10000, cal)).toBe(5.5);
+  it('extends linearly below 1 and above 5 outside the calibrated range', () => {
+    expect(hzToChao(cal.fMinHz / 2, cal)).toBeLessThan(1);
+    expect(hzToChao(cal.fMaxHz * 2, cal)).toBeGreaterThan(5);
   });
 
-  it('handles zero / NaN gracefully', () => {
-    expect(hzToChao(0, cal)).toBe(0.5);
-    expect(hzToChao(Number.NaN, cal)).toBe(0.5);
+  it('handles zero / NaN by returning 0', () => {
+    expect(hzToChao(0, cal)).toBe(0);
+    expect(hzToChao(Number.NaN, cal)).toBe(0);
   });
 });
 

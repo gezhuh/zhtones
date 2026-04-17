@@ -53,7 +53,7 @@ export function Calibrate({ onSaved }: Props) {
         );
       } else {
         setError(
-          `Captured ${result.totalFrames} frames but none passed the voiced-pitch filter (peak RMS ${result.peakRms.toFixed(3)}). Try holding a steady vowel for the full 2 seconds.`,
+          `Captured ${result.totalFrames} frames but none passed the voiced-pitch filter (peak RMS ${result.peakRms.toFixed(3)}, adaptive threshold ${result.rmsThreshold.toFixed(3)}). Try holding a steady vowel for the full 2 seconds.`,
         );
       }
       return;

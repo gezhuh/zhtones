@@ -1,6 +1,6 @@
 import type { Calibration } from '../calibration/mapping';
 import { hzToChao } from '../calibration/mapping';
-import type { Recording } from './recorder';
+import type { PitchFrame, Recording } from './recorder';
 
 export interface ChaoFrame {
   t: number;
@@ -15,9 +15,35 @@ export interface ChaoTrack {
 
 export interface TrackOptions {
   clarityThreshold?: number;
-  rmsThreshold?: number;
+  rmsFloor?: number;
+  rmsQuantile?: number;
+  rmsQuantileFactor?: number;
   minHz?: number;
   maxHz?: number;
+}
+
+function quantile(sortedAsc: number[], q: number): number {
+  if (sortedAsc.length === 0) return 0;
+  const idx = q * (sortedAsc.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.min(sortedAsc.length - 1, lo + 1);
+  const frac = idx - lo;
+  return sortedAsc[lo] * (1 - frac) + sortedAsc[hi] * frac;
+}
+
+// Adaptive voiced-frame gate: a frame counts as speech if its RMS exceeds
+// `max(floor, recordingQuantile * factor)`. The quantile (default p95) tracks
+// "typical loud" without being swayed by a single transient; the floor keeps
+// an all-silence recording from passing its own noise through.
+export function adaptiveRmsThreshold(
+  frames: PitchFrame[],
+  floor: number,
+  q: number,
+  factor: number,
+): number {
+  if (frames.length === 0) return floor;
+  const sorted = frames.map((f) => f.rms).sort((a, b) => a - b);
+  return Math.max(floor, quantile(sorted, q) * factor);
 }
 
 export function trackChao(
@@ -26,9 +52,12 @@ export function trackChao(
   opts: TrackOptions = {},
 ): ChaoTrack {
   const clarityT = opts.clarityThreshold ?? 0.75;
-  const rmsT = opts.rmsThreshold ?? 0.003;
+  const rmsFloor = opts.rmsFloor ?? 0.002;
+  const rmsQ = opts.rmsQuantile ?? 0.95;
+  const rmsFactor = opts.rmsQuantileFactor ?? 0.15;
   const minHz = opts.minHz ?? 60;
   const maxHz = opts.maxHz ?? 600;
+  const rmsT = adaptiveRmsThreshold(rec.frames, rmsFloor, rmsQ, rmsFactor);
 
   const voiced = rec.frames.filter(
     (f) => f.clarity >= clarityT && f.rms >= rmsT && f.hz >= minHz && f.hz <= maxHz,
@@ -59,13 +88,18 @@ export interface MedianResult {
   totalFrames: number;
   voicedFrames: number;
   peakRms: number;
+  rmsThreshold: number;
 }
 
 export function medianHzInRange(rec: Recording, opts: TrackOptions = {}): MedianResult {
   const clarityT = opts.clarityThreshold ?? 0.8;
-  const rmsT = opts.rmsThreshold ?? 0.004;
+  const rmsFloor = opts.rmsFloor ?? 0.003;
+  const rmsQ = opts.rmsQuantile ?? 0.95;
+  const rmsFactor = opts.rmsQuantileFactor ?? 0.2;
   const minHz = opts.minHz ?? 60;
   const maxHz = opts.maxHz ?? 600;
+  const rmsT = adaptiveRmsThreshold(rec.frames, rmsFloor, rmsQ, rmsFactor);
+
   const voiced = rec.frames.filter(
     (f) => f.clarity >= clarityT && f.rms >= rmsT && f.hz >= minHz && f.hz <= maxHz,
   );
@@ -76,6 +110,7 @@ export function medianHzInRange(rec: Recording, opts: TrackOptions = {}): Median
     totalFrames: rec.frames.length,
     voicedFrames: voiced.length,
     peakRms,
+    rmsThreshold: rmsT,
   };
 }
 
