@@ -23,12 +23,14 @@ const SANDHI_LABEL: Record<SandhiKind, string> = {
   yi: '一-sandhi',
   bu: '不-sandhi',
   neutral: '轻声',
+  't4-truncation': 'T4 + full → 半四声 + _',
 };
 
 const FILTERS: { label: string; key: SandhiKind | 'all' }[] = [
   { label: 'All', key: 'all' },
   { label: 'T3+T3', key: 'third-third' },
   { label: '半三声', key: 'half-third' },
+  { label: '半四声', key: 't4-truncation' },
   { label: '一-sandhi', key: 'yi' },
   { label: '不-sandhi', key: 'bu' },
   { label: '轻声', key: 'neutral' },

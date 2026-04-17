@@ -13,7 +13,8 @@ export type SandhiKind =
   | 'half-third'
   | 'yi'
   | 'bu'
-  | 'neutral';
+  | 'neutral'
+  | 't4-truncation';
 
 export interface Prompt {
   id: string;
