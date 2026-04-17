@@ -41,12 +41,24 @@ export function Calibrate({ onSaved }: Props) {
     setError(null);
     setSaved(false);
     const rec = await recordPitch(2200);
-    const med = medianHzInRange(rec, { clarityThreshold: 0.9, rmsThreshold: 0.015 });
-    if (med == null) {
-      setError("Couldn't detect a stable pitch — try again, holding the vowel longer.");
+    const result = medianHzInRange(rec);
+    if (result.medianHz == null) {
+      if (result.totalFrames === 0) {
+        setError(
+          "No audio reached the pitch detector. Check mic permission and that the tab's mic isn't muted.",
+        );
+      } else if (result.peakRms < 0.004) {
+        setError(
+          `Mic signal is very quiet (peak RMS ${result.peakRms.toFixed(4)}). Speak louder, move closer, or raise the input gain in your OS settings.`,
+        );
+      } else {
+        setError(
+          `Captured ${result.totalFrames} frames but none passed the voiced-pitch filter (peak RMS ${result.peakRms.toFixed(3)}). Try holding a steady vowel for the full 2 seconds.`,
+        );
+      }
       return;
     }
-    setReadings((prev) => ({ ...prev, [step]: med }));
+    setReadings((prev) => ({ ...prev, [step]: result.medianHz! }));
   }
 
   const haveAll = readings.low && readings.mid && readings.high;
