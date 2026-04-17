@@ -6,18 +6,14 @@ export interface Calibration {
   updatedAt: number;
 }
 
-const CHAO_MIN = 0.5;
-const CHAO_MAX = 5.5;
-
 export function hzToChao(hz: number, cal: Calibration): number {
-  if (!isFinite(hz) || hz <= 0) return CHAO_MIN;
+  if (!isFinite(hz) || hz <= 0) return 0;
   const lo = Math.log2(cal.fMinHz);
   const hi = Math.log2(cal.fMaxHz);
   const span = hi - lo;
   if (span <= 0) return 3;
   const x = Math.log2(hz);
-  const v = 1 + (4 * (x - lo)) / span;
-  return Math.min(CHAO_MAX, Math.max(CHAO_MIN, v));
+  return 1 + (4 * (x - lo)) / span;
 }
 
 export function chaoToHz(level: number, cal: Calibration): number {
