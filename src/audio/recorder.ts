@@ -13,10 +13,21 @@ export interface Recording {
   sampleRate: number;
 }
 
-const FRAME_SIZE = 2048;
-const HOP_SIZE = 1024;
+const DEFAULT_FRAME_SIZE = 2048;
+const DEFAULT_HOP_SIZE = 512;
 
-export async function recordPitch(durationMs: number): Promise<Recording> {
+export interface RecordOptions {
+  frameSize?: number;
+  hopSize?: number;
+}
+
+export async function recordPitch(
+  durationMs: number,
+  opts: RecordOptions = {},
+): Promise<Recording> {
+  const FRAME_SIZE = opts.frameSize ?? DEFAULT_FRAME_SIZE;
+  const HOP_SIZE = opts.hopSize ?? DEFAULT_HOP_SIZE;
+
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       echoCancellation: false,

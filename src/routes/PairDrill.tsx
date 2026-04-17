@@ -125,6 +125,7 @@ export function PairDrill({ cal }: { cal: Calibration | null }) {
             targetUnderlying={prompt.underlyingContours}
             showUnderlying={showUnderlying && !!prompt.sandhi}
             user={track?.frames}
+            autoFit
           />
         </div>
         <label className="toggle" style={{ marginTop: 8 }}>
